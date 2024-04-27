@@ -10,15 +10,7 @@ from training.model_pipeline import *
 from training.report import print_report
 from training.model_keypoint import *
 
-from utils import path_keypoints, path_keypoints_augmented, path_label
-
-
-def set_all_seeds(seed):
-    torch.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(seed)
-    random.seed(seed)
+from utils import path_keypoints, path_keypoints_augmented, path_label, set_all_seeds
 
 
 set_all_seeds(42)
@@ -58,7 +50,8 @@ if torch.cuda.is_available():
     # if GPU available, use cuda (on a cpu, training will take a considerable length of time!)
     device = "cuda"
 
-model = CNN_keypoint(num_classes=len(label_list)).to(device)
+model = MLP(num_classes=len(label_list)).to(device)
+# model = CNN_keypoint(num_classes=len(label_list)).to(device)
 
 truelabels, predictions = run_pipeline(
     model,

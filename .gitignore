@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 archives_data_posture_correction
 *.jpg
+test
+test_draw_arch.py

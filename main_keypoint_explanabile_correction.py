@@ -211,34 +211,37 @@ def get_direction_between_keypoints(keypoints1, keypoints2):
 
 
 def correcting_posture_respect_gt(
-    model, keypoint, keypoint_gt, impacting_keypoints=None
+    model, keypoint, keypoint_gt, impacting_keypoints=None, move_all_keypoints_together=False
 ):
 
     new_keypoint, keypoint_moved = get_new_keypoint_based_on_gt(
-        model, keypoint, keypoint_gt, impacting_keypoints
+        model, keypoint, keypoint_gt, impacting_keypoints, move_all_keypoints_together
     )
     return new_keypoint, keypoint_moved
 
 
-def move_keypoint(keypoint, keypoint_gt, keypoint_idx):
-    x, y = keypoint[keypoint_idx]
-    x_gt, y_gt = keypoint_gt[keypoint_idx]
+def move_keypoint(keypoint, keypoint_gt, list_keypoint_to_move):
+    keypoint_original = keypoint.clone()
+    for keypoint_idx in list_keypoint_to_move:
+        x, y = keypoint[keypoint_idx]
+        x_gt, y_gt = keypoint_gt[keypoint_idx]
 
-    x_min = torch.min(torch.tensor([x, x_gt]))
-    x_max = torch.max(torch.tensor([x, x_gt]))
-    y_min = torch.min(torch.tensor([y, y_gt]))
-    y_max = torch.max(torch.tensor([y, y_gt]))
+        x_min = torch.min(torch.tensor([x, x_gt]))
+        x_max = torch.max(torch.tensor([x, x_gt]))
+        y_min = torch.min(torch.tensor([y, y_gt]))
+        y_max = torch.max(torch.tensor([y, y_gt]))
 
-    y_min, x_min, y_max, x_max = int(y_min), int(x_min), int(y_max), int(x_max)
-    y = random.randint(y_min, y_max)
-    x = random.randint(x_min, x_max)
-    keypoint[keypoint_idx] = torch.tensor([x, y])
+        y_min, x_min, y_max, x_max = int(y_min), int(x_min), int(y_max), int(x_max)
+        y = random.randint(y_min, y_max)
+        x = random.randint(x_min, x_max)
+        keypoint[keypoint_idx] = torch.tensor([x, y])
 
+    #assert (torch.zeros(keypoint.shape) != (keypoint - keypoint_original)).all().item()
     return keypoint
 
 
 def get_new_keypoint_based_on_gt(
-    model, keypoint, keypoint_gt, list_keypoint_to_move=None
+    model, keypoint, keypoint_gt, list_keypoint_to_move=None, move_all_keypoints_together=False
 ):
     if list_keypoint_to_move is None:
         list_keypoint_to_move = np.arange(0, number_of_keypoints, 1).tolist()
@@ -248,7 +251,29 @@ def get_new_keypoint_based_on_gt(
     keypoint_original = keypoint.clone()
     keypoint_moved = []
     keypoint_result = []
-    for keypoint_to_move in list_keypoint_to_move:
+    if move_all_keypoints_together==False:
+        for keypoint_to_move in list_keypoint_to_move:
+            count = 0
+            test_prediction = 0
+            while test_prediction == 0:
+                keypoint = keypoint_original.clone()
+                count += 1
+                if count > 100:
+                    test_prediction = 1
+                    continue
+
+                if keypoint_to_move in keypoint_moved:
+                    test_prediction = 1
+                    continue
+
+                keypoint = move_keypoint(keypoint, keypoint_gt, [keypoint_to_move])
+                test_prediction = predict_single_image(model, keypoint)
+
+            if predict_single_image(model, keypoint) == 1:
+                keypoint_result.append(keypoint)
+                keypoint_moved.append([keypoint_to_move])
+
+    elif move_all_keypoints_together==True:
         count = 0
         test_prediction = 0
         while test_prediction == 0:
@@ -258,12 +283,8 @@ def get_new_keypoint_based_on_gt(
                 test_prediction = 1
                 continue
 
-            if keypoint_to_move in keypoint_moved:
-                test_prediction = 1
-                continue
-
-            list_keypoint_to_move = keypoint_to_move
-            keypoint = move_keypoint(keypoint, keypoint_gt, list_keypoint_to_move)
+            keypoint_to_move = list_keypoint_to_move
+            keypoint = move_keypoint(keypoint, keypoint_gt, keypoint_to_move)
             test_prediction = predict_single_image(model, keypoint)
 
         if predict_single_image(model, keypoint) == 1:
@@ -280,11 +301,6 @@ def get_new_keypoint_based_on_gt(
     )
 
     for idx, keypoint in enumerate(keypoint_result):
-        drawed_img = draw_keypoints(keypoint)
-        cv2.imwrite("test.jpg", drawed_img)
-        drawed_img = draw_keypoints(keypoint_original)
-        cv2.imwrite("test_wrong.jpg", drawed_img)
-
         probabilty_correct = get_probability_single_image(model, keypoint)
         if probabilty_correct > max:
             max = probabilty_correct
@@ -298,27 +314,43 @@ def augment_results(keypoint_result, keypoint_moved, keypoint_original):
     keypoint_result_augmented = []
     keypoint_moved_augmented = []
 
-    for i, joint_idx in enumerate(keypoint_moved):
-        joint_name = joints[joint_idx]
-        if "right" in joint_name:
-            opposite_joint_name = joint_name.replace("right", "left")
-        elif "left" in joint_name:
-            opposite_joint_name = joint_name.replace("left", "right")
-        else:
-            continue
-        opposite_joint_idx = [k for k, v in joints.items() if v == opposite_joint_name][
-            0
-        ]
+    for i, list_joint_idx in enumerate(keypoint_moved):
         keypoint = keypoint_result[i].clone()
-        difference_keypoint_moved = keypoint[joint_idx] - keypoint_original[joint_idx]
-        keypoint[opposite_joint_idx][0] += difference_keypoint_moved[0]
-        keypoint[opposite_joint_idx][1] += difference_keypoint_moved[1] * -1
+        opposite_list_joint_idx = []
+        for joint_idx in list_joint_idx:
+            joint_name = joints[joint_idx]
+            if "right" in joint_name:
+                opposite_joint_name = joint_name.replace("right", "left")
+            elif "left" in joint_name:
+                opposite_joint_name = joint_name.replace("left", "right")
+            else:
+                continue
+            opposite_joint_idx = [k for k, v in joints.items() if v == opposite_joint_name][
+                0
+            ]
+            difference_keypoint_moved = keypoint[joint_idx] - keypoint_original[joint_idx]
+            keypoint[opposite_joint_idx][0] += difference_keypoint_moved[0]
+            keypoint[opposite_joint_idx][1] += difference_keypoint_moved[1] * -1
+            opposite_list_joint_idx.append(opposite_joint_idx)
         keypoint_result_augmented.append(keypoint)
-        keypoint_moved_augmented.append([joint_idx, opposite_joint_idx])
+        keypoint_moved_augmented.append([list_joint_idx, opposite_list_joint_idx])
 
     keypoint_result = keypoint_result + keypoint_result_augmented
     keypoint_moved = keypoint_moved + keypoint_moved_augmented
     return keypoint_result, keypoint_moved
+
+
+def print_keypoint_corrected(keypoint):
+    if keypoint is None:
+        print("No correction found")
+        return
+
+    if isinstance(keypoint, int):
+        print(f"KeyPoint {joint_dict[keypoint]} corrected")
+        return
+    else:
+        for keypoint in keypoint:
+            print_keypoint_corrected(keypoint)
 
 
 set_all_seeds(42)
@@ -383,6 +415,8 @@ test_incorrect = list(test_incorrect["path"])
 joint_dict = get_joint_info("coco_25")
 
 for i in range(100):
+    if i == 65:
+        print("skip")
     test_k = []
     for file in test_incorrect[i]:
         file = get_keypoint_path(file)
@@ -392,18 +426,18 @@ for i in range(100):
     test_k = test_k.mean(axis=0)
 
     new_keypoint, keypoint_moved = correcting_posture_respect_gt(
-        model, test_k, avg_correct
+        model, test_k, avg_correct, impacting_keypoints=[8,10], move_all_keypoints_together=True
     )
+
+    # new_keypoint, keypoint_moved = correcting_posture_respect_gt(
+    #     model, test_k, avg_correct, impacting_keypoints=None, move_all_keypoints_together=False
+    # )
 
     if keypoint_moved is not None:
         drawed_img = draw_keypoints(new_keypoint)
         cv2.imwrite("test.jpg", drawed_img)
         drawed_img = draw_keypoints(test_k)
         cv2.imwrite("test_wrong.jpg", drawed_img)
-        if isinstance(keypoint_moved, int):
-            print(f"KeyPoint {joint_dict[keypoint_moved]} corrected")
-        else:
-            for keypoint in keypoint_moved:
-                print(f"KeyPoint {joint_dict[keypoint]} corrected")
+        print_keypoint_corrected(keypoint_moved)
     else:
         print("No correction found")

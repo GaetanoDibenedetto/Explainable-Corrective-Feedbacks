@@ -31,3 +31,25 @@ class CNN_keypoint(nn.Module):
         x = self.fc(x)
         x = self.activation(x)
         return x
+
+
+class MLP(nn.Module):
+
+    # Defining the Constructor
+    def __init__(self, num_classes):
+        super(MLP, self).__init__()
+
+        self.layers = nn.Sequential(
+            nn.Linear(30, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, num_classes),
+        )
+        self.activation = nn.Sigmoid()
+
+    def forward(self, x):
+        x = x.flatten(start_dim=1)
+        x = self.layers(x)
+        x = self.activation(x)
+        return x

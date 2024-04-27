@@ -60,6 +60,7 @@ def load_keypoint(keypoint_path, normalize_keypoint=True):
 
 def normalize(volume):
     """Normalize the volume"""
+    # scale in a 0-1 range
     volume = (volume - torch.min(volume)) / max(
         (torch.max(volume) - torch.min(volume)), 1
     )

@@ -19,6 +19,29 @@ Tested on Ubuntu 23.10 with Python 3.11.6.
 
 
 ## Reproducibility for Paper Results
+The dataset can be downloaded from the following link: [CLICK HERE](https://zenodo.org/records/11075018).
+
+The 3 folders must be inserted in a root folder of the project, after of the git clone of this repository, named `archives_data_posture_correction`, as in the tree structure following below:
+```
+archives_data_posture_correction
+│   
+├───keypoints
+│       ap_1_250.jpg.npy
+│		...
+│		...
+│       ms_3_51581.jpg.npy
+│       
+├───keypoints_augmented
+│       augmented_ap_1_250.jpg.npy
+│		...
+│		...
+│       augmented_ms_3_51581.jpg.npy
+│       
+└───labels
+    └───result
+            labels_for_train.csv
+```            
+
 
 To reproduce the results mentioned in the associated paper, the following scripts can be utilized:
 
