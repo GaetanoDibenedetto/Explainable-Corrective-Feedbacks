@@ -48,10 +48,10 @@ To reproduce the results mentioned in the associated paper, the following script
 1. **Pose Classification Model (Section 4.2)**:
   - `main_keypoint_classification.py`
 
-2. **Explaination Module based on Data Statistics (Section 4.4)**:
+2. **Explaination Module based on Data Statistics (Section 4.3)**:
   - `explaination_based_on_data_statistics.py`
 
-3. **Personalized Feedback Module (Section 4.3)**:
+3. **Personalized Feedback Module (Section 4.4)**:
   - `main_keypoint_explanabile_correction.py`
 
 ## References
