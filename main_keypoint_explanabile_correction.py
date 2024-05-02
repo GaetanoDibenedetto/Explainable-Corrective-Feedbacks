@@ -439,5 +439,6 @@ for i in range(100):
         drawed_img = draw_keypoints(test_k)
         cv2.imwrite("test_wrong.jpg", drawed_img)
         print_keypoint_corrected(keypoint_moved)
+        break
     else:
         print("No correction found")

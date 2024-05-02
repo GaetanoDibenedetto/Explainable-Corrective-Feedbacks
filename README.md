@@ -18,7 +18,7 @@ Tested on Ubuntu 23.10 with Python 3.11.6.
 3. **Ready to Use!**
 
 
-## Reproducibility for Paper Results
+## Reproducibility of Paper Results
 The dataset can be downloaded from the following link: [CLICK HERE](https://zenodo.org/records/11075018).
 
 The 3 folders must be inserted in a root folder of the project, after of the git clone of this repository, named `archives_data_posture_correction`, as in the tree structure following below:
@@ -42,18 +42,17 @@ archives_data_posture_correction
             labels_for_train.csv
 ```            
 
+### Execution
+To reproduce the results mentioned in the associated paper, the following scripts can be utilized in the following order:
 
-To reproduce the results mentioned in the associated paper, the following scripts can be utilized:
-
-- **Pose Classification Model (Section 4.2)**:
+1. **Pose Classification Model (Section 4.2)**:
   - `main_keypoint_classification.py`
 
-- **Explainable Suggestions Module (Section 4.3)**:
-  - `main_keypoint_explainable_correction.py`
+2. **Explaination Module based on Data Statistics (Section 4.4)**:
+  - `explaination_based_on_data_statistics.py`
 
-- **Explainable Module based on Data Statistics (Section 4.4)**:
-  - `explainable_variance_dataset_label.py`
-  - `explainable_variance_output_from_model.py`
+3. **Personalized Feedback Module (Section 4.3)**:
+  - `main_keypoint_explanabile_correction.py`
 
 ## References
 
